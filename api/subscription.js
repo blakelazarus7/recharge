@@ -1,64 +1,56 @@
 export default async function handler(req, res) {
-  const RECHARGE_API_KEY = "sk_1x1_195a6d72ab5445ab862e1b1c36afeb23d4792ea170cd8b698a999eb8322bb81c";
-  const email = req.query.email;
+  const token = req.query.token;
 
-  if (!email) {
-    return res.status(400).json({ error: "Missing email" });
+  if (!token) {
+    return res.status(400).json({ error: "Missing token" });
   }
 
+  const SHOPIFY_DOMAIN = 'tuqhcs-7a.myshopify.com'; // your domain
+  const STOREFRONT_TOKEN = '3ea7963fedd614e5499e1b317f2305b6'; // your token
+
+  const query = `
+    query {
+      customer(customerAccessToken: "${token}") {
+        id
+        email
+      }
+    }
+  `;
+
   try {
-    // Step 1: Get customer by email
-    const customerResp = await fetch(`https://api.rechargeapps.com/customers?email=${encodeURIComponent(email)}`, {
+    const shopifyRes = await fetch(`https://${SHOPIFY_DOMAIN}/api/2023-10/graphql.json`, {
+      method: 'POST',
       headers: {
-        "X-Recharge-Access-Token": RECHARGE_API_KEY,
-        "Accept": "application/json"
-      }
+        'Content-Type': 'application/json',
+        'X-Shopify-Storefront-Access-Token': STOREFRONT_TOKEN
+      },
+      body: JSON.stringify({ query })
     });
 
-    const customerData = await customerResp.json();
+    const shopifyData = await shopifyRes.json();
+    const customer = shopifyData?.data?.customer;
 
-    if (!customerData.customers || customerData.customers.length === 0) {
-      return res.status(404).json({ error: "Customer not found in Recharge" });
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
     }
 
-    const customerId = customerData.customers[0].id;
+    const impactStats = {
+      orderCount: 1,
+      farmsSupported: 5,
+      pesticidesAvoided: 2,
+      fertilizersAvoided: 21,
+      carbonSequestered: 2.5,
+      carbonFootprintAvoided: 2,
+      waterSaved: 40
+    };
 
-    // Step 2: Get subscriptions by customer ID
-    const subResp = await fetch(`https://api.rechargeapps.com/subscriptions?customer_id=${customerId}`, {
-      headers: {
-        "X-Recharge-Access-Token": RECHARGE_API_KEY,
-        "Accept": "application/json"
-      }
+    res.status(200).json({
+      ...impactStats,
+      customerId: customer.id,
+      email: customer.email
     });
-
-    const subData = await subResp.json();
-
-    if (!subData.subscriptions || subData.subscriptions.length === 0) {
-      return res.status(404).json({ error: "No subscriptions found" });
-    }
-
-    const subscriptions = subData.subscriptions.map(sub => {
-      const unit = sub.order_interval_unit; // "week"
-      const count = parseInt(sub.order_interval_frequency); // 1, 2, 4
-
-      let frequency = "Unknown";
-
-      if (unit === "week") {
-        if (count === 1) frequency = "Weekly";
-        else if (count === 2) frequency = "Every Two Weeks";
-        else if (count === 4) frequency = "Monthly";
-      }
-
-      return {
-        product_title: sub.product_title,
-        frequency: frequency
-      };
-    });
-
-    res.status(200).json({ subscriptions });
-
   } catch (err) {
-    console.error("Recharge Error:", err);
+    console.error("Error in /api/hello:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }
