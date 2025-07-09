@@ -1,10 +1,11 @@
 export default async function handler(req, res) {
   // ✅ Set CORS headers
   res.setHeader("Access-Control-Allow-Origin", "https://www.eatfare.com");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Vary", "Origin");
 
-  // ✅ Handle preflight request
+  // ✅ Handle preflight
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -17,7 +18,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Step 1: Get customer by email
     const customerResp = await fetch(`https://api.rechargeapps.com/customers?email=${encodeURIComponent(email)}`, {
       headers: {
         "X-Recharge-Access-Token": RECHARGE_API_KEY,
@@ -33,7 +33,6 @@ export default async function handler(req, res) {
 
     const customerId = customerData.customers[0].id;
 
-    // Step 2: Get subscriptions by customer ID
     const subResp = await fetch(`https://api.rechargeapps.com/subscriptions?customer_id=${customerId}`, {
       headers: {
         "X-Recharge-Access-Token": RECHARGE_API_KEY,
@@ -48,9 +47,8 @@ export default async function handler(req, res) {
     }
 
     const subscriptions = subData.subscriptions.map(sub => {
-      const unit = sub.order_interval_unit; // "week"
-      const count = parseInt(sub.order_interval_frequency); // 1, 2, 4
-
+      const unit = sub.order_interval_unit;
+      const count = parseInt(sub.order_interval_frequency);
       let frequency = "Unknown";
 
       if (unit === "week") {
@@ -66,7 +64,6 @@ export default async function handler(req, res) {
     });
 
     res.status(200).json({ subscriptions });
-
   } catch (err) {
     console.error("Recharge Error:", err);
     res.status(500).json({ error: "Internal server error" });
