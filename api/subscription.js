@@ -37,26 +37,21 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "No subscriptions found" });
     }
 
-    // 🔍 DEBUG LOG — so we can see the full object
-    console.log("🔍 Recharge subscription object:", JSON.stringify(subData.subscriptions, null, 2));
-
     const subscriptions = subData.subscriptions.map(sub => {
-      const unit = sub.order_interval_unit;
-      const count = parseInt(sub.order_interval_frequency);
+      const unit = sub.order_interval_unit; // "week"
+      const count = parseInt(sub.order_interval_frequency); // 1, 2, 4
 
       let frequency = "Unknown";
 
-      if (unit === "day") {
-        if (count === 7) frequency = "Weekly";
-        else if (count === 14) frequency = "Every Two Weeks";
-        else if (count === 30) frequency = "Monthly";
+      if (unit === "week") {
+        if (count === 1) frequency = "Weekly";
+        else if (count === 2) frequency = "Every Two Weeks";
+        else if (count === 4) frequency = "Monthly";
       }
 
       return {
         product_title: sub.product_title,
-        frequency: frequency,
-        debug_unit: unit,
-        debug_count: count
+        frequency: frequency
       };
     });
 
