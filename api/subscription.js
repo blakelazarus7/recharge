@@ -47,21 +47,22 @@ export default async function handler(req, res) {
     }
 
     const subscriptions = subData.subscriptions.map(sub => {
-      const unit = sub.order_interval_unit;
-      const count = parseInt(sub.order_interval_frequency);
-      let frequency = "Unknown";
+  const unit = sub.order_interval_unit;
+  const count = parseInt(sub.order_interval_frequency);
+  let frequency = "Unknown";
 
-      if (unit === "week") {
-        if (count === 1) frequency = "Weekly";
-        else if (count === 2) frequency = "Every Two Weeks";
-        else if (count === 4) frequency = "Monthly";
-      }
+  if (unit === "week") {
+    if (count === 1) frequency = "Weekly";
+    else if (count === 2) frequency = "Every Two Weeks";
+    else if (count === 4) frequency = "Monthly";
+  }
 
-      return {
-        product_title: sub.product_title,
-        frequency: frequency
-      };
-    });
+  return {
+    subscription_id: sub.id,              // ✅ THIS IS WHAT YOU NEED
+    product_title: sub.product_title,
+    frequency: frequency
+  };
+});
 
     res.status(200).json({ subscriptions });
   } catch (err) {
